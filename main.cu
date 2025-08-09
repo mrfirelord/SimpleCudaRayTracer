@@ -11,14 +11,15 @@
 
 void printDeviceInfo();
 
-rt_in_one_weekend::Color ray_color(const rt_in_one_weekend::Ray &r) {
-    return {0, 0, 0};
-}
-
 int main() {
     printDeviceInfo();
 
+    // Camera
+
     const rt_in_one_weekend::Camera camera(3024, 16.0 / 9.0);
+    rt_in_one_weekend::Camera *dCamera;
+    CHECK_CUDA(cudaMalloc(reinterpret_cast<void **>(&dCamera), sizeof(rt_in_one_weekend::Camera)));
+    CHECK_CUDA(cudaMemcpy(dCamera, &camera, sizeof(rt_in_one_weekend::Camera), cudaMemcpyHostToDevice));
 
     // World
 
@@ -50,10 +51,7 @@ int main() {
     UnloadImage(image);
 
     while (!WindowShouldClose()) {
-        write_color<<<gridSize, blockSize>>>(dPixels, camera.imageWidth, camera.imageHeight,
-                                             *dWorld,
-                                             camera.cameraCenter,
-                                             camera.pixel00Loc, camera.pixelDeltaU, camera.pixelDeltaV);
+        write_color<<<gridSize, blockSize>>>(*dWorld, *dCamera, dPixels);
         CHECK_CUDA(cudaGetLastError());
         CHECK_CUDA(cudaDeviceSynchronize());
 

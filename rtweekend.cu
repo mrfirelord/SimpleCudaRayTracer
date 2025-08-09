@@ -37,6 +37,5 @@ namespace rt_in_one_weekend {
 #include "Vec3.cu"
 #include "interval.cu"
 #include "ray.cu"
-#include "util.cu"
 
 #endif
