@@ -91,6 +91,10 @@ namespace rt_in_one_weekend {
         return finalColor * pow(gammaFactor, numberOfBounces); // Absorbed after max bounces
     }
 
+    __device__ __host__ inline double linearToGamma(double linearComponent) {
+        return linearComponent > 0 ? sqrt(linearComponent) : 0.0;
+    }
+
     __global__ void writeColor(
         const HittableList &world, const Camera &camera, unsigned char *pixels, curandState *randStates) {
         // printf("%d", world.count);
@@ -108,9 +112,9 @@ namespace rt_in_one_weekend {
             }
             pixelColor = pixelColor * camera.pixelSamplesScale;
 
-            const auto r = pixelColor.x();
-            const auto g = pixelColor.y();
-            const auto b = pixelColor.z();
+            const auto r = linearToGamma(pixelColor.x());
+            const auto g = linearToGamma(pixelColor.y());
+            const auto b = linearToGamma(pixelColor.z());
 
             // Translate the [0,1] component values to the byte range [0,255].
             const Interval intensity(0.000, 0.999);
