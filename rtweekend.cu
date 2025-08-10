@@ -1,10 +1,10 @@
 #ifndef RTWEEKEND_H
 #define RTWEEKEND_H
 
-#include <cmath>
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <curand_kernel.h>
 
 
 // C++ Std Usings
@@ -31,14 +31,12 @@ namespace rt_in_one_weekend {
 
     __device__ __host__ inline double degreesToRadians(const double degrees) { return degrees * pi / 180.0; }
 
-    __device__ __host__ inline double randomDouble(unsigned int *seed) {
-        // Linear congruential generator
-        *seed = *seed * 1103515245 + 12345;
-        return (*seed & 0x7fffffff) / static_cast<double>(0x7fffffff);
+    __device__ inline double randomDouble(curandState *state) {
+        return curand_uniform_double(state);
     }
 
-    __device__ __host__ inline double randomDouble(unsigned int *seed, double min, double max) {
-        return min + (max - min) * randomDouble(seed);
+    __device__ inline double randomDouble(curandState *state, double min, double max) {
+        return min + (max - min) * curand_uniform_double(state);
     }
 }
 

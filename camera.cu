@@ -49,20 +49,16 @@ namespace rt_in_one_weekend {
 
     using Color = Vec3;
 
-    __device__ Vec3 sampleSquare() {
-        // Better seed mixing to avoid patterns
-        unsigned int seed = (blockIdx.x * blockDim.x + threadIdx.x) * 1664525U + 
-                           (blockIdx.y * blockDim.y + threadIdx.y) * 1013904223U + 
-                           clock();
+    __device__ Vec3 sampleSquare(curandState *state) {
         // Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
-        return Vec3(randomDouble(&seed) - 0.5, randomDouble(&seed) - 0.5, 0);
+        return Vec3(randomDouble(state) - 0.5, randomDouble(state) - 0.5, 0);
     }
 
-    __device__ Ray getRay(const int x, const int y, const Camera &camera) {
+    __device__ Ray getRay(const int x, const int y, const Camera &camera, curandState *state) {
         // Construct a camera ray originating from the origin and directed at randomly sampled
         // point around the pixel location i, j.
 
-        const auto offset = sampleSquare();
+        const auto offset = sampleSquare(state);
         const auto pixelSample = camera.pixel00Loc
                                  + (x + offset.x()) * camera.pixelDeltaU
                                  + (y + offset.y()) * camera.pixelDeltaV;
@@ -73,11 +69,7 @@ namespace rt_in_one_weekend {
         return Ray(rayOrigin, rayDirection);
     }
 
-    __device__ Color rayColor(Ray ray, const HittableList &world, unsigned int maxDepth) {
-        unsigned int seed = (blockIdx.x * blockDim.x + threadIdx.x) * 2654435761U + 
-                           (blockIdx.y * blockDim.y + threadIdx.y) * 2246822519U + 
-                           clock() * 3266489917U;
-
+    __device__ Color rayColor(Ray ray, const HittableList &world, unsigned int maxDepth, curandState *state) {
         auto finalColor = Color(0, 0, 0);
         int numberOfBounces = 0;
 
@@ -85,7 +77,7 @@ namespace rt_in_one_weekend {
             HitRecord rec;
             if (world.hit(ray, Interval(0.001, infinity), rec)) {
                 numberOfBounces++;
-                Vec3 direction = rec.normal + randomUnitVector(&seed);
+                Vec3 direction = rec.normal + randomUnitVector(state);
                 ray = Ray(rec.p, direction);
             } else {
                 const Vec3 unitDirection = unitVector(ray.direction());
@@ -95,24 +87,26 @@ namespace rt_in_one_weekend {
             }
         }
 
-        auto gammaFactor = 0.5;
+        constexpr auto gammaFactor = 0.5;
         return finalColor * pow(gammaFactor, numberOfBounces); // Absorbed after max bounces
     }
 
-    __global__ void writeColor(const HittableList &world, const Camera &camera, unsigned char *pixels) {
+    __global__ void writeColor(
+        const HittableList &world, const Camera &camera, unsigned char *pixels, curandState *randStates) {
         // printf("%d", world.count);
         const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
         const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
 
         if (x < camera.imageWidth && y < camera.imageHeight) {
+            const unsigned int idx = y * camera.imageWidth + x;
+            curandState *state = &randStates[idx];
+
             Color pixelColor = Color(0, 0, 0);
             for (int sample = 0; sample < camera.samplesPerPixel; sample++) {
-                Ray r = getRay(x, y, camera);
-                pixelColor += rayColor(r, world, camera.maxDepth);
+                Ray r = getRay(x, y, camera, state);
+                pixelColor += rayColor(r, world, camera.maxDepth, state);
             }
             pixelColor = pixelColor * camera.pixelSamplesScale;
-
-            const unsigned int idx = y * camera.imageWidth + x;
 
             const auto r = pixelColor.x();
             const auto g = pixelColor.y();
@@ -132,6 +126,16 @@ namespace rt_in_one_weekend {
             pixels[outputPosition + 1] = static_cast<unsigned char>(gByte); // G
             pixels[outputPosition + 2] = static_cast<unsigned char>(bByte); // B
             pixels[outputPosition + 3] = 255; // A
+        }
+    }
+
+    __global__ void initCurand(curandState *state, unsigned long seed, int imageWidth, int imageHeight) {
+        const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if (x < imageWidth && y < imageHeight) {
+            const unsigned int idx = y * imageWidth + x;
+            curand_init(seed, idx, 0, &state[idx]);
         }
     }
 }

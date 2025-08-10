@@ -1,5 +1,6 @@
 #include <raylib.h>
 #include <cuda_runtime.h>
+#include <ctime>
 
 #include "rtweekend.cu"
 #include <iostream>
@@ -38,10 +39,20 @@ int main() {
     unsigned char *dPixels;
     CHECK_CUDA(cudaMalloc(reinterpret_cast<void **>(&dPixels), camera.imageSize * 4 * sizeof(unsigned char)));
 
+    // Allocate and initialize cuRAND states
+
+    curandState *dRandStates;
+    CHECK_CUDA(cudaMalloc(reinterpret_cast<void **>(&dRandStates), camera.imageSize * sizeof(curandState)));
 
     dim3 blockSize(8, 8);
     dim3 gridSize((camera.imageWidth + blockSize.x - 1) / blockSize.x,
                   (camera.imageHeight + blockSize.y - 1) / blockSize.y);
+
+    // Initialize cuRAND states
+    rt_in_one_weekend::initCurand<<<gridSize, blockSize>>>(dRandStates, time(nullptr), camera.imageWidth,
+                                                           camera.imageHeight);
+    CHECK_CUDA(cudaGetLastError());
+    CHECK_CUDA(cudaDeviceSynchronize());
 
     InitWindow(camera.imageWidth, camera.imageHeight, "CUDA + raylib Demo");
 
@@ -51,7 +62,7 @@ int main() {
     UnloadImage(image);
 
     while (!WindowShouldClose()) {
-        writeColor<<<gridSize, blockSize>>>(*dWorld, *dCamera, dPixels);
+        writeColor<<<gridSize, blockSize>>>(*dWorld, *dCamera, dPixels, dRandStates);
         CHECK_CUDA(cudaGetLastError());
         CHECK_CUDA(cudaDeviceSynchronize());
 
@@ -68,7 +79,9 @@ int main() {
     UnloadTexture(texture);
     free(hPixels);
     cudaFree(dPixels);
+    cudaFree(dRandStates);
     cudaFree(dWorld);
+    cudaFree(dCamera);
     CloseWindow();
 
     return 0;

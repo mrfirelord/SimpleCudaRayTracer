@@ -26,8 +26,11 @@ set_target_properties(SimpleCudaRayTracer PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON
 )
 
-# Link raylib - now built with same compiler
-target_link_libraries(SimpleCudaRayTracer PRIVATE raylib)
+# Find and link CUDA libraries
+find_package(CUDAToolkit REQUIRED)
+
+# Link raylib and cuRAND - now built with same compiler
+target_link_libraries(SimpleCudaRayTracer PRIVATE raylib CUDA::curand)
 
 # Optional: Set output directory
 set_target_properties(SimpleCudaRayTracer PROPERTIES

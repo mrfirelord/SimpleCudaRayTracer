@@ -50,12 +50,12 @@ namespace rt_in_one_weekend {
             return e[0] * e[0] + e[1] * e[1] + e[2] * e[2];
         }
 
-        __device__ __host__ static Vec3 random(unsigned int *seed) {
-            return Vec3(randomDouble(seed), randomDouble(seed), randomDouble(seed));
+        __device__ static Vec3 random(curandState *state) {
+            return Vec3(randomDouble(state), randomDouble(state), randomDouble(state));
         }
 
-        __device__ __host__ static Vec3 random(unsigned int *seed, const double min, const double max) {
-            return Vec3(randomDouble(seed, min, max), randomDouble(seed, min, max), randomDouble(seed, min, max));
+        __device__ static Vec3 random(curandState *state, const double min, const double max) {
+            return Vec3(randomDouble(state, min, max), randomDouble(state, min, max), randomDouble(state, min, max));
         }
     };
 
@@ -108,17 +108,17 @@ namespace rt_in_one_weekend {
         return v / v.length();
     }
 
-    __device__ __host__ inline Vec3 randomUnitVector(unsigned int *seed) {
+    __device__ inline Vec3 randomUnitVector(curandState *state) {
         while (true) {
-            auto p = Vec3::random(seed, -1, 1);
+            auto p = Vec3::random(state, -1, 1);
             auto lengthSquared = p.lengthSquared();
             if (1e-160 < lengthSquared && lengthSquared <= 1)
                 return p / sqrt(lengthSquared);
         }
     }
 
-    __device__ __host__ inline Vec3 randomOnHemisphere(const Vec3 &normal, unsigned int *seed) {
-        Vec3 onUnitSphere = randomUnitVector(seed);
+    __device__ inline Vec3 randomOnHemisphere(const Vec3 &normal, curandState *state) {
+        Vec3 onUnitSphere = randomUnitVector(state);
         if (dot(onUnitSphere, normal) > 0.0) // In the same hemisphere as the normal
             return onUnitSphere;
         return -onUnitSphere;
