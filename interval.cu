@@ -25,6 +25,12 @@ namespace rt_in_one_weekend {
             return min < x && x < max;
         }
 
+        __device__ __host__ double clamp(const double x) const {
+            if (x < min) return min;
+            if (x > max) return max;
+            return x;
+        }
+
         static const Interval empty, universe;
     };
 

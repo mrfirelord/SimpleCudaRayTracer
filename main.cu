@@ -16,7 +16,7 @@ int main() {
 
     // Camera
 
-    const rt_in_one_weekend::Camera camera(3024, 16.0 / 9.0);
+    const rt_in_one_weekend::Camera camera(3024, 16.0 / 9.0, 10U);
     rt_in_one_weekend::Camera *dCamera;
     CHECK_CUDA(cudaMalloc(reinterpret_cast<void **>(&dCamera), sizeof(rt_in_one_weekend::Camera)));
     CHECK_CUDA(cudaMemcpy(dCamera, &camera, sizeof(rt_in_one_weekend::Camera), cudaMemcpyHostToDevice));

@@ -30,6 +30,16 @@ namespace rt_in_one_weekend {
     // Utility Functions
 
     __device__ __host__ inline double degreesToRadians(const double degrees) { return degrees * pi / 180.0; }
+
+    __device__ inline double randomDouble(unsigned int *seed) {
+        // Linear congruential generator
+        *seed = *seed * 1103515245 + 12345;
+        return (*seed & 0x7fffffff) / static_cast<double>(0x7fffffff);
+    }
+
+    __device__ inline double randomDouble(unsigned int *seed, double min, double max) {
+        return min + (max - min) * randomDouble(seed);
+    }
 }
 
 // Common Headers
