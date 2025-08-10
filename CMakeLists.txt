@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.30)
-project(untitled3 CUDA)
+project(SimpleCudaRayTracer CUDA)
 
 set(CMAKE_CUDA_STANDARD 20)
 
@@ -19,17 +19,17 @@ set(BUILD_GAMES OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(raylib)
 
 # Add executable
-add_executable(untitled3 main.cu)
+add_executable(SimpleCudaRayTracer main.cu)
 
 # Set CUDA properties
-set_target_properties(untitled3 PROPERTIES
+set_target_properties(SimpleCudaRayTracer PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON
 )
 
 # Link raylib - now built with same compiler
-target_link_libraries(untitled3 PRIVATE raylib)
+target_link_libraries(SimpleCudaRayTracer PRIVATE raylib)
 
 # Optional: Set output directory
-set_target_properties(untitled3 PROPERTIES
+set_target_properties(SimpleCudaRayTracer PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
