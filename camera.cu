@@ -16,8 +16,9 @@ namespace rt_in_one_weekend {
         Vec3 pixel00Loc;
         Vec3 pixelDeltaU;
         Vec3 pixelDeltaV;
-        int samplesPerPixel = 10; // Count of random samples for each pixel
+        int samplesPerPixel = 50; // Count of random samples for each pixel
         double pixelSamplesScale;
+        unsigned int maxDepth = 50; // Maximum number of ray bounces into scene
 
     public:
         Camera(const int imageWidth, const double aspectRatio,
@@ -49,9 +50,10 @@ namespace rt_in_one_weekend {
     using Color = Vec3;
 
     __device__ Vec3 sampleSquare() {
-        // Use thread and block indices to create unique seed per thread
-        unsigned int seed = blockIdx.x * blockDim.x + threadIdx.x + 
-                           (blockIdx.y * blockDim.y + threadIdx.y) * gridDim.x * blockDim.x;
+        // Better seed mixing to avoid patterns
+        unsigned int seed = (blockIdx.x * blockDim.x + threadIdx.x) * 1664525U + 
+                           (blockIdx.y * blockDim.y + threadIdx.y) * 1013904223U + 
+                           clock();
         // Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
         return Vec3(randomDouble(&seed) - 0.5, randomDouble(&seed) - 0.5, 0);
     }
@@ -71,17 +73,33 @@ namespace rt_in_one_weekend {
         return Ray(rayOrigin, rayDirection);
     }
 
-    __device__ Color rayColor(const Ray &ray, const HittableList &world) {
-        HitRecord rec;
-        if (world.hit(ray, Interval(0, infinity), rec))
-            return 0.5 * (rec.normal + Color(1, 1, 1));
+    __device__ Color rayColor(Ray ray, const HittableList &world, unsigned int maxDepth) {
+        unsigned int seed = (blockIdx.x * blockDim.x + threadIdx.x) * 2654435761U + 
+                           (blockIdx.y * blockDim.y + threadIdx.y) * 2246822519U + 
+                           clock() * 3266489917U;
 
-        const Vec3 unitDirection = unitVector(ray.direction());
-        const auto a = 0.5 * (unitDirection.y() + 1.0);
-        return (1.0 - a) * Color(1.0, 1.0, 1.0) + a * Color(0.5, 0.7, 1.0);
+        auto finalColor = Color(0, 0, 0);
+        int numberOfBounces = 0;
+
+        for (unsigned int depth = 0; depth < maxDepth; depth++) {
+            HitRecord rec;
+            if (world.hit(ray, Interval(0.001, infinity), rec)) {
+                numberOfBounces++;
+                Vec3 direction = rec.normal + randomUnitVector(&seed);
+                ray = Ray(rec.p, direction);
+            } else {
+                const Vec3 unitDirection = unitVector(ray.direction());
+                auto a = 0.5 * (unitDirection.y() + 1.0);
+                finalColor = (1.0 - a) * Color(1.0, 1.0, 1.0) + a * Color(0.5, 0.7, 1.0);
+                break;
+            }
+        }
+
+        auto gammaFactor = 0.5;
+        return finalColor * pow(gammaFactor, numberOfBounces); // Absorbed after max bounces
     }
 
-    __global__ void write_color(const HittableList &world, const Camera &camera, unsigned char *pixels) {
+    __global__ void writeColor(const HittableList &world, const Camera &camera, unsigned char *pixels) {
         // printf("%d", world.count);
         const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
         const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -90,7 +108,7 @@ namespace rt_in_one_weekend {
             Color pixelColor = Color(0, 0, 0);
             for (int sample = 0; sample < camera.samplesPerPixel; sample++) {
                 Ray r = getRay(x, y, camera);
-                pixelColor += rayColor(r, world);
+                pixelColor += rayColor(r, world, camera.maxDepth);
             }
             pixelColor = pixelColor * camera.pixelSamplesScale;
 

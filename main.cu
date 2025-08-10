@@ -39,7 +39,7 @@ int main() {
     CHECK_CUDA(cudaMalloc(reinterpret_cast<void **>(&dPixels), camera.imageSize * 4 * sizeof(unsigned char)));
 
 
-    dim3 blockSize(32, 16);
+    dim3 blockSize(8, 8);
     dim3 gridSize((camera.imageWidth + blockSize.x - 1) / blockSize.x,
                   (camera.imageHeight + blockSize.y - 1) / blockSize.y);
 
@@ -51,7 +51,7 @@ int main() {
     UnloadImage(image);
 
     while (!WindowShouldClose()) {
-        write_color<<<gridSize, blockSize>>>(*dWorld, *dCamera, dPixels);
+        writeColor<<<gridSize, blockSize>>>(*dWorld, *dCamera, dPixels);
         CHECK_CUDA(cudaGetLastError());
         CHECK_CUDA(cudaDeviceSynchronize());
 
