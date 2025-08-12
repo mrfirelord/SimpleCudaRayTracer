@@ -4,15 +4,18 @@
 #include "Ray.cu"
 
 namespace rt_in_one_weekend {
+    class Material;
+
     class HitRecord {
     public:
         Point3 p;
         Vec3 normal;
+        Material *material;
         double t;
 
         bool frontFace;
 
-        __device__ __host__ void setFaceNormal(const Ray &r, const Vec3 &outwardNormal) {
+        C_DH void setFaceNormal(const Ray &r, const Vec3 &outwardNormal) {
             // Sets the hit record normal vector.
             // NOTE: the parameter `outward_normal` is assumed to have unit length.
 
@@ -23,9 +26,9 @@ namespace rt_in_one_weekend {
 
     class Hittable {
     public:
-        __device__ __host__ virtual ~Hittable() = default;
+        C_DH virtual ~Hittable() = default;
 
-        __device__ __host__ virtual bool hit(const Ray &ray, Interval ray_t, HitRecord &rec) const = 0;
+        C_DH virtual bool hit(const Ray &ray, Interval ray_t, HitRecord &rec) const = 0;
     };
 }
 #endif

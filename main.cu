@@ -22,11 +22,38 @@ int main() {
     CHECK_CUDA(cudaMalloc(reinterpret_cast<void **>(&dCamera), sizeof(rt_in_one_weekend::Camera)));
     CHECK_CUDA(cudaMemcpy(dCamera, &camera, sizeof(rt_in_one_weekend::Camera), cudaMemcpyHostToDevice));
 
-    // World
+    // Materials
+    rt_in_one_weekend::Lambertian *dMaterialGround;
+    CHECK_CUDA(cudaMalloc(reinterpret_cast<void **>(&dMaterialGround), sizeof(rt_in_one_weekend::Lambertian)));
+    rt_in_one_weekend::Lambertian *dMaterialCenter;
+    CHECK_CUDA(cudaMalloc(reinterpret_cast<void **>(&dMaterialCenter), sizeof(rt_in_one_weekend::Lambertian)));
+    rt_in_one_weekend::Metal *dMaterialLeft;
+    CHECK_CUDA(cudaMalloc(reinterpret_cast<void **>(&dMaterialLeft), sizeof(rt_in_one_weekend::Metal)));
+    rt_in_one_weekend::Metal *dMaterialRight;
+    CHECK_CUDA(cudaMalloc(reinterpret_cast<void **>(&dMaterialRight), sizeof(rt_in_one_weekend::Metal)));
 
+    initLambertian<<<1, 1>>>(dMaterialGround, rt_in_one_weekend::Color(0.8, 0.8, 0.0));
+    CHECK_CUDA(cudaGetLastError());
+    CHECK_CUDA(cudaDeviceSynchronize());
+
+    initLambertian<<<1, 1>>>(dMaterialCenter, rt_in_one_weekend::Color(0.1, 0.2, 0.5));
+    CHECK_CUDA(cudaGetLastError());
+    CHECK_CUDA(cudaDeviceSynchronize());
+
+    initMetal<<<1, 1>>>(dMaterialLeft, rt_in_one_weekend::Color(0.8, 0.8, 0.8));
+    CHECK_CUDA(cudaGetLastError());
+    CHECK_CUDA(cudaDeviceSynchronize());
+
+    initMetal<<<1, 1>>>(dMaterialRight, rt_in_one_weekend::Color(0.8, 0.6, 0.2));
+    CHECK_CUDA(cudaGetLastError());
+    CHECK_CUDA(cudaDeviceSynchronize());
+
+    // World
     rt_in_one_weekend::HittableList hWorld;
-    hWorld.add(rt_in_one_weekend::Sphere(rt_in_one_weekend::Point3(0, 0, -1), 0.5));
-    hWorld.add(rt_in_one_weekend::Sphere(rt_in_one_weekend::Point3(0, -100.5, -1), 100));
+    hWorld.add(rt_in_one_weekend::Sphere(rt_in_one_weekend::Point3(0.0, -100.5, -1.0), 100.0, dMaterialGround));
+    hWorld.add(rt_in_one_weekend::Sphere(rt_in_one_weekend::Point3(0.0, 0.0, -1.2), 0.5, dMaterialCenter));
+    hWorld.add(rt_in_one_weekend::Sphere(rt_in_one_weekend::Point3(-1.0, 0.0, -1.0), 0.5, dMaterialLeft));
+    hWorld.add(rt_in_one_weekend::Sphere(rt_in_one_weekend::Point3(1.0, 0.0, -1.0), 0.5, dMaterialRight));
 
     rt_in_one_weekend::HittableList *dWorld;
     CHECK_CUDA(cudaMalloc(reinterpret_cast<void **>(&dWorld), sizeof(rt_in_one_weekend::HittableList)));
@@ -82,6 +109,10 @@ int main() {
     cudaFree(dRandStates);
     cudaFree(dWorld);
     cudaFree(dCamera);
+    cudaFree(dMaterialGround);
+    cudaFree(dMaterialCenter);
+    cudaFree(dMaterialLeft);
+    cudaFree(dMaterialRight);
     CloseWindow();
 
     return 0;

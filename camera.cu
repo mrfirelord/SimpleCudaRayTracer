@@ -3,6 +3,7 @@
 
 #include "Vec3.cu"
 #include "interval.cu"
+#include "material.cu"
 
 namespace rt_in_one_weekend {
     class Camera {
@@ -47,8 +48,6 @@ namespace rt_in_one_weekend {
         }
     };
 
-    using Color = Vec3;
-
     __device__ Vec3 sampleSquare(curandState *state) {
         // Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
         return Vec3(randomDouble(state) - 0.5, randomDouble(state) - 0.5, 0);
@@ -69,16 +68,22 @@ namespace rt_in_one_weekend {
         return Ray(rayOrigin, rayDirection);
     }
 
-    __device__ Color rayColor(Ray ray, const HittableList &world, unsigned int maxDepth, curandState *state) {
+    __device__ Color rayColor(Ray ray, const HittableList &world, unsigned int maxDepth, curandState *cuRandState) {
         auto finalColor = Color(0, 0, 0);
-        int numberOfBounces = 0;
+        auto accumulatedAttenuation = Color(1, 1, 1);
 
         for (unsigned int depth = 0; depth < maxDepth; depth++) {
             HitRecord rec;
             if (world.hit(ray, Interval(0.001, infinity), rec)) {
-                numberOfBounces++;
-                Vec3 direction = rec.normal + randomUnitVector(state);
-                ray = Ray(rec.p, direction);
+                Ray scattered;
+                Color attenuation;
+                if (rec.material->scatter(ray, rec, attenuation, scattered, cuRandState)) {
+                    ray = scattered;
+                    accumulatedAttenuation = accumulatedAttenuation * attenuation;
+                } else {
+                    finalColor = Color(0, 0, 0);
+                    break;
+                }
             } else {
                 const Vec3 unitDirection = unitVector(ray.direction());
                 auto a = 0.5 * (unitDirection.y() + 1.0);
@@ -87,11 +92,10 @@ namespace rt_in_one_weekend {
             }
         }
 
-        constexpr auto gammaFactor = 0.5;
-        return finalColor * pow(gammaFactor, numberOfBounces); // Absorbed after max bounces
+        return accumulatedAttenuation * finalColor;
     }
 
-    __device__ __host__ inline double linearToGamma(double linearComponent) {
+    C_DH inline double linearToGamma(double linearComponent) {
         return linearComponent > 0 ? sqrt(linearComponent) : 0.0;
     }
 

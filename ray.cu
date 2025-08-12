@@ -6,15 +6,15 @@
 namespace rt_in_one_weekend {
     class Ray {
     public:
-        __device__ __host__ Ray() = default;
+        C_DH Ray() = default;
 
-        __device__ __host__ Ray(const Point3 &origin, const Vec3 &direction) : orig(origin), dir(direction) {
+        C_DH Ray(const Point3 &origin, const Vec3 &direction) : orig(origin), dir(direction) {
         }
 
-        __device__ __host__ const Point3 &origin() const { return orig; }
-        __device__ __host__ const Vec3 &direction() const { return dir; }
+        C_DH const Point3 &origin() const { return orig; }
+        C_DH const Vec3 &direction() const { return dir; }
 
-        __device__ __host__ Point3 at(const double t) const { return orig + t * dir; }
+        C_DH Point3 at(const double t) const { return orig + t * dir; }
 
     private:
         Point3 orig;

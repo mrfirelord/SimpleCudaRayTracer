@@ -13,19 +13,19 @@ namespace rt_in_one_weekend {
         Sphere objects[MAX_OBJECTS];
         int count;
 
-        __device__ __host__ HittableList() : objects{}, count(0) {
+        C_DH HittableList() : objects{}, count(0) {
         }
 
-        __device__ __host__ void clear() { count = 0; }
+        C_DH void clear() { count = 0; }
 
-        __device__ __host__ void add(const Sphere &object) {
+        C_DH void add(const Sphere &object) {
             if (count < MAX_OBJECTS) {
                 objects[count] = object;
                 count++;
             }
         }
 
-        __device__ __host__ bool
+        C_DH bool
         hit(const Ray &ray, const Interval interval, HitRecord &rec) const override {
             HitRecord tempRec;
             bool hit_anything = false;

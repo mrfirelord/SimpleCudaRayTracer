@@ -7,14 +7,15 @@
 namespace rt_in_one_weekend {
     class Sphere final : public Hittable {
     public:
-        __device__ __host__ Sphere() : center(Point3(0, 0, 0)), radius(0) {
+        C_DH Sphere() : center(Point3(0, 0, 0)), radius(0), material(nullptr) {
         }
 
-        __device__ __host__ Sphere(const Point3 &center, double radius) : center(center), radius(std::fmax(0, radius)) {
+        C_DH Sphere(const Point3 &center, double radius, Material *material) : center(center),
+                                                                               radius(fmax(0, radius)),
+                                                                               material(material) {
         }
 
-        __device__ __host__ bool
-        hit(const Ray &r, const Interval interval, HitRecord &rec) const override {
+        C_DH bool hit(const Ray &r, const Interval interval, HitRecord &rec) const override {
             const Vec3 oc = center - r.origin();
             const auto a = r.direction().lengthSquared();
             const auto h = dot(r.direction(), oc);
@@ -24,7 +25,7 @@ namespace rt_in_one_weekend {
             if (discriminant < 0)
                 return false;
 
-            const auto sqrtDiscriminant = std::sqrt(discriminant);
+            const auto sqrtDiscriminant = sqrt(discriminant);
 
             // Find the nearest root that lies in the acceptable range.
             auto root = (h - sqrtDiscriminant) / a;
@@ -38,6 +39,7 @@ namespace rt_in_one_weekend {
             rec.p = r.at(rec.t);
             const Vec3 outwardNormal = (rec.p - center) / radius;
             rec.setFaceNormal(r, outwardNormal);
+            rec.material = material;
 
             return true;
         }
@@ -45,6 +47,7 @@ namespace rt_in_one_weekend {
     private:
         Point3 center;
         double radius;
+        Material *material;
     };
 }
 

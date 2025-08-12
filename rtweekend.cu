@@ -7,6 +7,11 @@
 #include <curand_kernel.h>
 
 
+// CUDA Function Decorators
+#define C_DH __device__ __host__
+#define C_D __device__
+#define C_H __host__
+
 // C++ Std Usings
 
 using std::make_shared;
@@ -29,13 +34,13 @@ namespace rt_in_one_weekend {
 
     // Utility Functions
 
-    __device__ __host__ inline double degreesToRadians(const double degrees) { return degrees * pi / 180.0; }
+    C_DH inline double degreesToRadians(const double degrees) { return degrees * pi / 180.0; }
 
-    __device__ inline double randomDouble(curandState *state) {
+    C_D inline double randomDouble(curandState *state) {
         return curand_uniform_double(state);
     }
 
-    __device__ inline double randomDouble(curandState *state, double min, double max) {
+    C_D inline double randomDouble(curandState *state, double min, double max) {
         return min + (max - min) * curand_uniform_double(state);
     }
 }
