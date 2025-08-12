@@ -44,7 +44,7 @@ namespace rt_in_one_weekend {
 
     class Metal final : public Material {
     public:
-        C_DH Metal(const Color &albedo) : albedo(albedo) {
+        C_DH Metal(const Color &albedo, const double fuzz) : albedo(albedo), fuzz(fuzz < 1 ? fuzz : 1) {
         }
 
         C_D bool scatter(const Ray &incoming,
@@ -52,7 +52,8 @@ namespace rt_in_one_weekend {
                          Color &attenuation,
                          Ray &scattered,
                          curandState *cuRandState) const override {
-            const Vec3 reflected = reflect(incoming.direction(), rec.normal);
+            Vec3 reflected = reflect(incoming.direction(), rec.normal);
+            reflected = unitVector(reflected) + (fuzz * randomUnitVector(cuRandState));
             scattered = Ray(rec.p, reflected);
             attenuation = albedo;
             return true;
@@ -60,14 +61,15 @@ namespace rt_in_one_weekend {
 
     private:
         Color albedo;
+        double fuzz;
     };
 
     __global__ void initLambertian(Lambertian *material, Color albedo) {
         new(material) Lambertian(albedo);
     }
 
-    __global__ void initMetal(Metal *material, Color albedo) {
-        new(material) Metal(albedo);
+    __global__ void initMetal(Metal *material, Color albedo, double fuzz) {
+        new(material) Metal(albedo, fuzz);
     }
 }
 

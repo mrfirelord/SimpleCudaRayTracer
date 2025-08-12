@@ -40,11 +40,11 @@ int main() {
     CHECK_CUDA(cudaGetLastError());
     CHECK_CUDA(cudaDeviceSynchronize());
 
-    initMetal<<<1, 1>>>(dMaterialLeft, rt_in_one_weekend::Color(0.8, 0.8, 0.8));
+    initMetal<<<1, 1>>>(dMaterialLeft, rt_in_one_weekend::Color(0.8, 0.8, 0.8), 0.3);
     CHECK_CUDA(cudaGetLastError());
     CHECK_CUDA(cudaDeviceSynchronize());
 
-    initMetal<<<1, 1>>>(dMaterialRight, rt_in_one_weekend::Color(0.8, 0.6, 0.2));
+    initMetal<<<1, 1>>>(dMaterialRight, rt_in_one_weekend::Color(0.8, 0.6, 0.2), 1.0);
     CHECK_CUDA(cudaGetLastError());
     CHECK_CUDA(cudaDeviceSynchronize());
 
