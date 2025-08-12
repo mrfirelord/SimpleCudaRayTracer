@@ -20,29 +20,52 @@ namespace rt_in_one_weekend {
         int samplesPerPixel = 50; // Count of random samples for each pixel
         double pixelSamplesScale;
         unsigned int maxDepth = 50; // Maximum number of ray bounces into scene
+        double vfov; // Vertical view angle (field of view)
+
+        Point3 lookfrom; // Point camera is looking from
+        Point3 lookat; // Point camera is looking at
+        Vec3 vup = Vec3(0, 1, 0); // Camera-relative "up" direction
+
+        Vec3 u, v, w; // Camera frame basis vectors
 
     public:
-        Camera(const int imageWidth, const double aspectRatio,
-               const unsigned int samplesPerPixel): imageWidth(imageWidth),
-                                                    aspectRatio(aspectRatio),
-                                                    samplesPerPixel(samplesPerPixel) {
+        Camera(const int imageWidth,
+               const double aspectRatio,
+               const unsigned int samplesPerPixel,
+               const double vfov,
+               Point3 lookfrom,
+               Point3 lookAt): imageWidth(imageWidth),
+                               aspectRatio(aspectRatio),
+                               samplesPerPixel(samplesPerPixel),
+                               vfov(vfov),
+                               lookfrom(lookfrom),
+                               lookat(lookAt) {
             imageHeight = static_cast<int>(imageWidth / aspectRatio);
             imageSize = imageWidth * imageHeight;
 
-            constexpr auto viewportHeight = 2.0;
+            center = lookfrom;
+            focalLength = (lookfrom - lookat).length();
+
+            auto theta = degreesToRadians(vfov);
+            auto h = std::tan(theta / 2);
+            const auto viewportHeight = 2 * h * focalLength;
             const auto viewportWidth = viewportHeight * (static_cast<double>(imageWidth) / imageHeight);
-            center = Point3(0, 0, 0);
+
+            // Calculate the u,v,w unit basis vectors for the camera coordinate frame.
+            w = unitVector(lookfrom - lookat);
+            u = unitVector(cross(vup, w));
+            v = cross(w, u);
 
             // Calculate the vectors across the horizontal and down the vertical viewport edges.
-            const auto viewportU = Vec3(viewportWidth, 0, 0);
-            const auto viewportV = Vec3(0, -viewportHeight, 0);
+            const auto viewportU = viewportWidth * u;
+            const auto viewportV = viewportHeight * v;
 
             // Calculate the horizontal and vertical delta vectors from pixel to pixel.
             pixelDeltaU = viewportU / imageWidth;
             pixelDeltaV = viewportV / imageHeight;
 
             // Calculate the location of the upper left pixel.
-            const auto viewportUpperLeft = center - Vec3(0, 0, focalLength) - viewportU / 2 - viewportV / 2;
+            auto viewportUpperLeft = center - (focalLength * w) - viewportU / 2 - viewportV / 2;
             pixel00Loc = viewportUpperLeft + 0.5 * (pixelDeltaU + pixelDeltaV);
             pixelSamplesScale = 1.0 / samplesPerPixel;
         }

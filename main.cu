@@ -17,7 +17,14 @@ int main() {
 
     // Camera
 
-    const rt_in_one_weekend::Camera camera(3024, 16.0 / 9.0, 10U);
+    const auto R = std::cos(rt_in_one_weekend::pi / 4);
+    const rt_in_one_weekend::Camera camera(
+        3024,
+        16.0 / 9.0,
+        10U,
+        120,
+        rt_in_one_weekend::Point3(0.4, -2, 1),
+        rt_in_one_weekend::Point3(0, 0, -1));
     rt_in_one_weekend::Camera *dCamera;
     CHECK_CUDA(cudaMalloc(reinterpret_cast<void **>(&dCamera), sizeof(rt_in_one_weekend::Camera)));
     CHECK_CUDA(cudaMemcpy(dCamera, &camera, sizeof(rt_in_one_weekend::Camera), cudaMemcpyHostToDevice));
@@ -50,10 +57,10 @@ int main() {
 
     // World
     rt_in_one_weekend::HittableList hWorld;
-    hWorld.add(rt_in_one_weekend::Sphere(rt_in_one_weekend::Point3(0.0, -100.5, -1.0), 100.0, dMaterialGround));
-    hWorld.add(rt_in_one_weekend::Sphere(rt_in_one_weekend::Point3(0.0, 0.0, -1.2), 0.5, dMaterialCenter));
-    hWorld.add(rt_in_one_weekend::Sphere(rt_in_one_weekend::Point3(-1.0, 0.0, -1.0), 0.5, dMaterialLeft));
-    hWorld.add(rt_in_one_weekend::Sphere(rt_in_one_weekend::Point3(1.0, 0.0, -1.0), 0.5, dMaterialRight));
+    // hWorld.add(rt_in_one_weekend::Sphere(rt_in_one_weekend::Point3(0.0, -100.5, -1.0), 100.0, dMaterialGround));
+    // hWorld.add(rt_in_one_weekend::Sphere(rt_in_one_weekend::Point3(0.0, 0.0, -1.2), 0.5, dMaterialCenter));
+    hWorld.add(rt_in_one_weekend::Sphere(rt_in_one_weekend::Point3(-R, 0.0, -1.0), R, dMaterialLeft));
+    hWorld.add(rt_in_one_weekend::Sphere(rt_in_one_weekend::Point3(R, 0.0, -1.0), R, dMaterialRight));
 
     rt_in_one_weekend::HittableList *dWorld;
     CHECK_CUDA(cudaMalloc(reinterpret_cast<void **>(&dWorld), sizeof(rt_in_one_weekend::HittableList)));
