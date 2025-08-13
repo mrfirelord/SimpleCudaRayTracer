@@ -22,37 +22,42 @@ namespace rt_in_one_weekend {
         unsigned int maxDepth = 50; // Maximum number of ray bounces into scene
         double vfov; // Vertical view angle (field of view)
 
-        Point3 lookfrom; // Point camera is looking from
+        Point3 lookFrom; // Point camera is looking from
         Point3 lookat; // Point camera is looking at
         Vec3 vup = Vec3(0, 1, 0); // Camera-relative "up" direction
 
         Vec3 u, v, w; // Camera frame basis vectors
+
+        Vec3 defocusDiskU; // Defocus disk horizontal radius
+        Vec3 defocusDiskV; // Defocus disk vertical radius
+
+        double defocusAngle = 30; // Variation angle of rays through each pixel
+        double focusDist = 1; // Distance from camera lookFrom point to plane of perfect focus
 
     public:
         Camera(const int imageWidth,
                const double aspectRatio,
                const unsigned int samplesPerPixel,
                const double vfov,
-               Point3 lookfrom,
-               Point3 lookAt): imageWidth(imageWidth),
+               const Point3 &lookFrom,
+               const Point3 &lookAt): imageWidth(imageWidth),
                                aspectRatio(aspectRatio),
                                samplesPerPixel(samplesPerPixel),
                                vfov(vfov),
-                               lookfrom(lookfrom),
+                               lookFrom(lookFrom),
                                lookat(lookAt) {
             imageHeight = static_cast<int>(imageWidth / aspectRatio);
             imageSize = imageWidth * imageHeight;
 
-            center = lookfrom;
-            focalLength = (lookfrom - lookat).length();
+            center = lookFrom;
 
             auto theta = degreesToRadians(vfov);
             auto h = std::tan(theta / 2);
-            const auto viewportHeight = 2 * h * focalLength;
+            const auto viewportHeight = 2 * h * focusDist;
             const auto viewportWidth = viewportHeight * (static_cast<double>(imageWidth) / imageHeight);
 
             // Calculate the u,v,w unit basis vectors for the camera coordinate frame.
-            w = unitVector(lookfrom - lookat);
+            w = unitVector(lookFrom - lookat);
             u = unitVector(cross(vup, w));
             v = cross(w, u);
 
@@ -65,33 +70,44 @@ namespace rt_in_one_weekend {
             pixelDeltaV = viewportV / imageHeight;
 
             // Calculate the location of the upper left pixel.
-            auto viewportUpperLeft = center - (focalLength * w) - viewportU / 2 - viewportV / 2;
+            auto viewportUpperLeft = center - (focusDist * w) - viewportU / 2 - viewportV / 2;
             pixel00Loc = viewportUpperLeft + 0.5 * (pixelDeltaU + pixelDeltaV);
             pixelSamplesScale = 1.0 / samplesPerPixel;
+
+            // Calculate the camera defocus disk basis vectors.
+            const auto defocusRadius = focusDist * tan(degreesToRadians(defocusAngle / 2));
+            defocusDiskU = u * defocusRadius;
+            defocusDiskV = v * defocusRadius;
         }
     };
 
-    __device__ Vec3 sampleSquare(curandState *state) {
+    C_D Point3 defocusDiskSample(curandState *cuRandState, const Camera &camera) {
+        // Returns a random point in the camera defocus disk.
+        auto p = randomInUnitDisk(cuRandState);
+        return camera.center + p[0] * camera.defocusDiskU + p[1] * camera.defocusDiskV;
+    }
+
+    C_D Vec3 sampleSquare(curandState *state) {
         // Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
         return Vec3(randomDouble(state) - 0.5, randomDouble(state) - 0.5, 0);
     }
 
-    __device__ Ray getRay(const int x, const int y, const Camera &camera, curandState *state) {
-        // Construct a camera ray originating from the origin and directed at randomly sampled
-        // point around the pixel location i, j.
+    C_D Ray getRay(const int x, const int y, const Camera &camera, curandState *state) {
+        // Construct a camera ray originating from the defocus disk and directed at a randomly
+        // sampled point around the pixel location x, y.
 
         const auto offset = sampleSquare(state);
         const auto pixelSample = camera.pixel00Loc
                                  + (x + offset.x()) * camera.pixelDeltaU
                                  + (y + offset.y()) * camera.pixelDeltaV;
 
-        const auto rayOrigin = camera.center;
+        const auto rayOrigin = camera.defocusAngle <= 0 ? camera.center : defocusDiskSample(state, camera);
         const auto rayDirection = pixelSample - rayOrigin;
 
         return Ray(rayOrigin, rayDirection);
     }
 
-    __device__ Color rayColor(Ray ray, const HittableList &world, unsigned int maxDepth, curandState *cuRandState) {
+    C_D Color rayColor(Ray ray, const HittableList &world, unsigned int maxDepth, curandState *cuRandState) {
         auto finalColor = Color(0, 0, 0);
         auto accumulatedAttenuation = Color(1, 1, 1);
 

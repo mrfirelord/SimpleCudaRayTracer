@@ -23,7 +23,7 @@ int main() {
         16.0 / 9.0,
         10U,
         120,
-        rt_in_one_weekend::Point3(0.4, -2, 1),
+        rt_in_one_weekend::Point3(0, 0, 0),
         rt_in_one_weekend::Point3(0, 0, -1));
     rt_in_one_weekend::Camera *dCamera;
     CHECK_CUDA(cudaMalloc(reinterpret_cast<void **>(&dCamera), sizeof(rt_in_one_weekend::Camera)));
