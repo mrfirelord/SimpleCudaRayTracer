@@ -111,17 +111,25 @@ namespace rt_in_one_weekend {
         return v / v.length();
     }
 
-    C_D inline Vec3 randomUnitVector(curandState *state) {
+    C_D inline Vec3 randomInUnitDisk(curandState *cuRandState) {
         while (true) {
-            auto p = Vec3::random(state, -1, 1);
+            auto p = Vec3(randomDouble(cuRandState, -1, 1), randomDouble(cuRandState, -1, 1), 0);
+            if (p.lengthSquared() < 1)
+                return p;
+        }
+    }
+
+    C_D inline Vec3 randomUnitVector(curandState *cuRandState) {
+        while (true) {
+            auto p = Vec3::random(cuRandState, -1, 1);
             auto lengthSquared = p.lengthSquared();
             if (1e-160 < lengthSquared && lengthSquared <= 1)
                 return p / sqrt(lengthSquared);
         }
     }
 
-    C_D inline Vec3 randomOnHemisphere(const Vec3 &normal, curandState *state) {
-        Vec3 onUnitSphere = randomUnitVector(state);
+    C_D inline Vec3 randomOnHemisphere(const Vec3 &normal, curandState *cuRandState) {
+        Vec3 onUnitSphere = randomUnitVector(cuRandState);
         if (dot(onUnitSphere, normal) > 0.0) // In the same hemisphere as the normal
             return onUnitSphere;
         return -onUnitSphere;
